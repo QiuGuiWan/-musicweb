@@ -2,8 +2,9 @@
 (function () {
   'use strict';
 
-  var FRAME_COUNT = 30;          // assets/bg_01.jpg ~ bg_30.jpg（对应原视频 0.5s/帧）
+  var FRAME_COUNT = 30;          // assets/bg_01.webp ~ bg_30.webp（对应原视频 0.5s/帧）
   var INTRO_FRAMES = 4;          // 前 4 帧（2 秒）为黑底雪花开场
+  var PRIORITY_FRAMES = 8;       // 启动前优先加载的帧数（开场+转场）
   var FRAME_HOLD = 1400;         // 每帧停留
   var CROSSFADE_MS = 1600;       // 交叉淡化时长（与 CSS transition 对应）
   var INTRODuration = 2600;      // 开场停留时长
@@ -15,22 +16,22 @@
   var musicBtn = document.getElementById('musicBtn');
   var musicHint = document.getElementById('musicHint');
 
-  /* ---------- 预加载背景帧 ---------- */
-  var frames = [];
-  var loaded = 0;
-  for (var i = 1; i <= FRAME_COUNT; i++) {
-    (function (idx) {
-      var img = new Image();
-      var n = (idx < 10 ? '0' + idx : '' + idx);
-      img.src = 'assets/bg_' + n + '.jpg';
-      img.onload = img.onerror = function () { loaded++; };
-      frames.push(img);
-    })(i);
-  }
+  /* ---------- 渐进式加载背景帧 ----------
+     启动只需前几帧；其余帧在开场动画期间后台懒加载，
+     每帧就绪后才参与交叉淡化循环。                                  */
+  var ready = [];
 
   function frameURL(idx) {
     var n = (idx < 10 ? '0' + idx : '' + idx);
-    return 'assets/bg_' + n + '.jpg';
+    return 'assets/bg_' + n + '.webp';
+  }
+
+  function loadFrame(idx, onload) {
+    if (ready[idx]) { if (onload) onload(); return; }
+    var img = new Image();
+    img.onload = function () { ready[idx] = true; if (onload) onload(); };
+    img.onerror = function () { ready[idx] = true; if (onload) onload(); };
+    img.src = frameURL(idx);
   }
 
   /* ---------- 背景交叉淡化调度 ---------- */
@@ -38,7 +39,7 @@
   var front = 0;
   var started = false;
 
-  function show(idx, zoom) {
+  function showNow(idx, zoom) {
     var back = 1 - front;
     var backEl = layers[back], frontEl = layers[front];
     backEl.style.backgroundImage = 'url("' + frameURL(idx) + '")';
@@ -50,27 +51,35 @@
     front = back;
   }
 
+  var frostIdx = INTRO_FRAMES + 1; // 从第 5 帧开始为霜冻转场/场景
+
+  function nextFrost() {
+    frostIdx++;
+    if (frostIdx >= FRAME_COUNT) frostIdx = INTRO_FRAMES + 1; // 循环霜冻部分
+    // 该帧就绪后才切换；加载期间保持当前画面，加载完成立即续播
+    loadFrame(frostIdx, function () {
+      if (!started) return;
+      showNow(frostIdx, true);
+      setTimeout(nextFrost, FRAME_HOLD);
+    });
+  }
+
   function startSequence() {
     if (started) return;
     started = true;
     // 开场：黑底雪花帧静态展示（帧号从 1 开始）
-    show(1, false);
+    loadFrame(1, function () { if (started) showNow(1, false); });
     heartGlow.classList.add('on');
 
-    var frostIdx = INTRO_FRAMES + 1; // 从第 5 帧开始为霜冻转场/场景
     // 开场 -> 霜冻转场
     setTimeout(function () {
       heartGlow.classList.remove('on');
       vignette.classList.add('on');
-      show(frostIdx, true);
-      frostIdx++;
-
-      // 之后循环交叉淡化
-      setInterval(function () {
-        show(frostIdx, true);
-        frostIdx++;
-        if (frostIdx >= FRAME_COUNT) frostIdx = INTRO_FRAMES; // 循环霜冻部分
-      }, FRAME_HOLD);
+      loadFrame(frostIdx, function () {
+        if (!started) return;
+        showNow(frostIdx, true);
+        setTimeout(nextFrost, FRAME_HOLD);
+      });
     }, INTRODuration);
   }
 
@@ -82,20 +91,26 @@
   }
   if (m) {
     var di = Math.min(FRAME_COUNT, Math.max(1, +m[1]));
-    bgA.style.backgroundImage = 'url("' + frameURL(di) + '")';
-    bgA.classList.add('show');
-    vignette.classList.add('on');
+    loadFrame(di, function () {
+      bgA.style.backgroundImage = 'url("' + frameURL(di) + '")';
+      bgA.classList.add('show');
+      vignette.classList.add('on');
+    });
   } else if (nofade) {
     startSequence();
   } else {
-  // 预加载完成后启动（或最多等待 3 秒）
+  // 优先帧加载过半即启动（或最多等待 2.5 秒）；其余帧后台继续
+  var bootLoaded = 0;
+  for (var i = 1; i <= PRIORITY_FRAMES; i++) {
+    loadFrame(i, function () { bootLoaded++; });
+  }
   var bootT = setInterval(function () {
-    if (loaded >= FRAME_COUNT * 0.6) {
+    if (bootLoaded >= Math.ceil(PRIORITY_FRAMES * 0.6)) {
       clearInterval(bootT);
       startSequence();
     }
   }, 120);
-  setTimeout(function () { clearInterval(bootT); startSequence(); }, 3000);
+  setTimeout(function () { clearInterval(bootT); startSequence(); }, 2500);
   }
 
   /* ---------- 雪花粒子系统 ---------- */
@@ -157,6 +172,13 @@
   audio.loop = true;
   audio.preload = 'auto';
   var playing = false;
+
+  // 音乐源失效时给出提示
+  audio.addEventListener('error', function () {
+    playing = false;
+    musicHint.textContent = '音乐暂不可用';
+    musicBtn.classList.add('playing');
+  });
 
   function setBtnState() {
     musicBtn.classList.toggle('playing', playing);
