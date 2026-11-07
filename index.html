@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>冬将至 我与你</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- 舞台：16:9，铺满视口 -->
+  <div id="stage">
+    <!-- 背景层 A / B 交叉淡化 -->
+    <div class="bg" id="bgA"></div>
+    <div class="bg" id="bgB"></div>
+
+    <!-- 开场心形光晕 -->
+    <div id="heartGlow"></div>
+
+    <!-- 霜层中心暗角（增强还原度） -->
+    <div id="vignette"></div>
+
+    <!-- 雪花画布 -->
+    <canvas id="snow"></canvas>
+
+    <!-- 文字层 -->
+    <div id="textLayer">
+      <!-- 主文字位：标题 → 歌词（交叉淡化过渡） -->
+      <div id="titleSlot">
+        <h1 class="line title active" data-kind="title">冬将至&ensp;我与你</h1>
+        <h1 class="line title" data-kind="title"></h1>
+        <h1 class="line lyric" data-kind="lyric"></h1>
+        <h1 class="line lyric" data-kind="lyric"></h1>
+      </div>
+
+      <p id="subtitle">冬至降临&ensp;平安喜乐&ensp;祝你祝我祝我们</p>
+
+      <!-- 小字位：制作人员名单（替换原 XINXINOVO） -->
+      <p id="credits">
+        <span class="cr active"></span>
+        <span class="cr"></span>
+      </p>
+    </div>
+
+    <!-- 音乐按钮 -->
+    <button id="musicBtn" aria-label="音乐开关">
+      <svg viewBox="0 0 24 24" width="20" height="20">
+        <path id="notePath" fill="currentColor" d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>
+      </svg>
+      <span id="musicHint">点击开启音乐</span>
+    </button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
