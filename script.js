@@ -168,13 +168,14 @@
   requestAnimationFrame(tick);
 
   /* ---------- 音乐 ----------
-     来源：https://easylink.cc/g91yn4 （隔岸.mp3 320k 原文件）
-     该短链是文件分享页，本身是 HTML 不能直接播放；
-     其真实地址为 cdn3.easylink.cc 上的带签名 CDN 链接（约 1 小时过期），
-     故已下载原文件并转码为 AAC 80k 自托管：assets/music.m4a（2.26MB，231s）。
-     本地同源加载，永久有效。   */
+     音源托管：https://9e2ruz9r.upload.tf （Cloudflare CDN，AAC 80k / 2.26MB / 231s）
+     直链：https://9e2ruz9r.upload.tf/p/9e2ruz9r/site/audio.m4a
+     已验证：Content-Type audio/mp4、Accept-Ranges bytes（206 拖动进度）、
+             跨站可访问，无需 CORS（<audio> 直连）。
+     仓库内不再存放音频文件，站点体积仅剩图片与字体。               */
   var AUDIO_SOURCES = [
-    'assets/music.m4a'
+    'https://9e2ruz9r.upload.tf/p/9e2ruz9r/site/audio.m4a',
+    'assets/music.m4a'   // 本地备用（若日后放回该文件则自动生效）
   ];
   var srcIdx = 0;
   var audio = new Audio();
@@ -182,6 +183,7 @@
   audio.preload = 'auto';
   audio.setAttribute('referrerpolicy', 'no-referrer');
   audio.src = AUDIO_SOURCES[0];
+  window.__audio = audio;   // 便于调试/自检
   var playing = false;
 
   // 当前音源失效时切换到下一个；全部失效则提示
