@@ -167,14 +167,32 @@
   }
   requestAnimationFrame(tick);
 
-  /* ---------- 音乐 ---------- */
-  var audio = new Audio('https://m701.music.126.net/20261107133548/4be453836d0ecce14537a66b8f396504/jdymusic/obj/wo3DlMOGwrbDjj7DisKw/83487235324/b446/d886/a6dc/1c0f92d0c0bd8954316418306d4b7784.mp3?vuutv=/ADRMEerL4ucCBGgoiHEmygYqe6r7pbcaqumdqCSiHg/kR2MPyTZhw13YwIhXwE8RK7lp7dMVsqFbBNfi09Zu9XSTSXloyDwa7pzHIOKK7A=');
+  /* ---------- 音乐 ----------
+     来源：https://easylink.cc/g91yn4 （隔岸.mp3 320k 原文件）
+     该短链是文件分享页，本身是 HTML 不能直接播放；
+     其真实地址为 cdn3.easylink.cc 上的带签名 CDN 链接（约 1 小时过期），
+     故已下载原文件并转码为 AAC 80k 自托管：assets/music.m4a（2.26MB，231s）。
+     本地同源加载，永久有效。   */
+  var AUDIO_SOURCES = [
+    'assets/music.m4a'
+  ];
+  var srcIdx = 0;
+  var audio = new Audio();
   audio.loop = true;
   audio.preload = 'auto';
+  audio.setAttribute('referrerpolicy', 'no-referrer');
+  audio.src = AUDIO_SOURCES[0];
   var playing = false;
 
-  // 音乐源失效时给出提示
+  // 当前音源失效时切换到下一个；全部失效则提示
   audio.addEventListener('error', function () {
+    if (srcIdx < AUDIO_SOURCES.length - 1) {
+      srcIdx++;
+      audio.src = AUDIO_SOURCES[srcIdx];
+      audio.load();
+      if (playing) tryStart();
+      return;
+    }
     playing = false;
     musicHint.textContent = '音乐暂不可用';
     musicBtn.classList.add('playing');
